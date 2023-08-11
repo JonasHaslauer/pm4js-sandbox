@@ -51,7 +51,10 @@ class PlotlyOcelGraphs {
 			var layout = {title: "Events per Activity",
 				font: {
 					size: 19
-				}};
+				},
+				xaxis: {
+					automargin: true
+				  }};
 			Plotly.newPlot('plotlyActGraph', data, layout, {responsive: true});
 			Pm4JS.stopAlgorithm(thisUuid, {});
 		}, 100);
@@ -212,6 +215,8 @@ class PlotlyOcelGraphs {
 		let self = this;
 		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChartActivities"});
 
+		console.log(this.model);
+
 		setTimeout(function() {
 			let objectsIds = self.model.overallObjectsView.objectsIdsSorted;
 			let serie = [];
@@ -224,6 +229,7 @@ class PlotlyOcelGraphs {
 				catch (err) {
 				}
 			}
+			console.log(serie.length)
 			serie.sort((a, b) => a[1] - b[1]);
 			let allColors = {};
 			let prob = 500 / serie.length;

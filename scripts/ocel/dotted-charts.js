@@ -9,23 +9,33 @@ class DottedChart {
 			'Object type': Object.keys(this.model.otObjectsView).sort()
 		};
 
-		this.data['Event'] = { 'Activity': this.createEventDataset() };
-		this.data['Event per object'] = { 'Activity': this.createObjectLifecycleDataset('all', 'Activity'), 'Object type': this.createObjectLifecycleDataset('all', 'Object type')};
-		this.data['Object creation'] = { 'Activity': this.createObjectLifecycleDataset('creation', 'Activity'), 'Object type': this.createObjectLifecycleDataset('creation', 'Object type')};
-		this.data['Object destruction'] = { 'Activity': this.createObjectLifecycleDataset('destruction', 'Activity'), 'Object type': this.createObjectLifecycleDataset('destruction', 'Object type')};
-
-		this.data['Object lifecycle'] = { 
-			'Activity': [...this.data['Object creation']['Activity'], ...this.data['Object destruction']['Activity']],
-			'Object type': [...this.data['Object creation']['Object type'], ...this.data['Object destruction']['Object type']] 
+		let eventDataset = this.createEventDataset();
+		this.data['Event'] = { 'ordered': { 'Activity': eventDataset }, 'unordered': { 'Activity': eventDataset } };
+		this.data['Event per object'] = {
+			'ordered': {'Activity': this.createObjectLifecycleDataset('Event per object', 'Activity', true), 'Object type': this.createObjectLifecycleDataset('Event per object', 'Object type', true)},
+			'unordered': { 'Activity': this.createObjectLifecycleDataset('Event per object', 'Activity', false), 'Object type': this.createObjectLifecycleDataset('Event per object', 'Object type', false)}
 		};
-		/*for(let i = 0; i < this.data['Object creation']['Activity'].length; i++) {
-			this.data['Object lifecycle']['Activity'].push(this.data['Object creation']['Activity'][i]);
-			this.data['Object lifecycle']['Activity'].push(this.data['Object destruction']['Activity'][i]);
-			this.data['Object lifecycle']['Object type'].push(this.data['Object creation']['Object type'][i]);
-			this.data['Object lifecycle']['Object type'].push(this.data['Object destruction']['Object type'][i]);
-		}*/
+		this.data['Object creation'] = { 
+			'ordered': { 'Activity': this.createObjectLifecycleDataset('Object creation', 'Activity', true), 'Object type': this.createObjectLifecycleDataset('Object creation', 'Object type', true)},
+			'unordered': { 'Activity': this.createObjectLifecycleDataset('Object creation', 'Activity', false), 'Object type': this.createObjectLifecycleDataset('Object creation', 'Object type', false)}
+		};
+		this.data['Object destruction'] = { 
+			'ordered': { 'Activity': this.createObjectLifecycleDataset('Object destruction', 'Activity', true), 'Object type': this.createObjectLifecycleDataset('Object destruction', 'Object type', true)},
+			'unordered': { 'Activity': this.createObjectLifecycleDataset('Object destruction', 'Activity', false), 'Object type': this.createObjectLifecycleDataset('Object destruction', 'Object type', false)}
+		};
 
-		this.currentDataset = this.data['Event']['Activity'];
+		this.data['Object lifecycle'] = {
+			'ordered': { 
+				'Activity': [...this.data['Object creation']['ordered']['Activity'], ...this.data['Object destruction']['ordered']['Activity']],
+				'Object type': [...this.data['Object creation']['ordered']['Object type'], ...this.data['Object destruction']['ordered']['Object type']]
+			},
+			'unordered': { 
+				'Activity': [...this.data['Object creation']['unordered']['Activity'], ...this.data['Object destruction']['unordered']['Activity']],
+				'Object type': [...this.data['Object creation']['unordered']['Object type'], ...this.data['Object destruction']['unordered']['Object type']] 
+			}
+		};
+
+		this.currentDataset = this.data['Event per object']['ordered']['Activity'];
 
 		this.randomSampling = Array.from(this.currentDataset.length, () => true);
 
@@ -59,11 +69,18 @@ class DottedChart {
 		return eventData;
 	}
 
+	createObjectLifecycleDataset(eventsToInclude, type, ordered) {
+		if(ordered) {
+			return this.createOrderedObjectLifecycleDataset(eventsToInclude, type);
+		}
+		return this.createUnorderedObjectLifecycleDataset(eventsToInclude, type);
+	}
+
 	/*
-	eventsToInclude = 'all', 'creation', 'destruction'
+	eventsToInclude = 'Event per object', 'Object creation', 'Object destruction'
 	type = 'Activity', 'Object type'
 	*/
-	createObjectLifecycleDataset(eventsToInclude, type) {
+	createOrderedObjectLifecycleDataset(eventsToInclude, type) {
 		let objectLifecycleData = [];
 
 		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
@@ -78,7 +95,7 @@ class DottedChart {
 		}
 		objectCreation.sort((a, b) => a[1] - b[1]);
 
-		let preInfoText = eventsToInclude == 'all' ? '' : eventsToInclude + ' of ';
+		let preInfoText = eventsToInclude == 'Event per object' ? '' : eventsToInclude + ' of ';
 
 		for (let objectIndex in objectCreation) {
 			let objectId = objectCreation[objectIndex][0];
@@ -88,13 +105,13 @@ class DottedChart {
 			}
 			let eventsToAdd = [];
 			switch(eventsToInclude) {
-				case 'all':
+				case 'Event per object':
 					eventsToAdd = events;
 					break;
-				case 'creation':
+				case 'Object creation':
 					eventsToAdd.push(events[0]);
 					break;
-				case 'destruction':
+				case 'Object destruction':
 					eventsToAdd.push(events.at(-1));
 			}
 
@@ -112,6 +129,49 @@ class DottedChart {
 		return objectLifecycleData;
 	}
 
+	/*
+	eventsToInclude = 'Event per object', 'Object creation', 'Object destruction'
+	type = 'Activity', 'Object type'
+	*/
+	createUnorderedObjectLifecycleDataset(eventsToInclude, type) {
+		let objectLifecycleData = [];
+		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
+
+		let preInfoText = eventsToInclude == 'Event per object' ? '' : eventsToInclude + ' of ';
+
+		let idx = 0;
+		for(let objectIndex in this.model.ocel['ocel:objects']) {
+			let events = objectEventRelations[objectIndex];
+			if(!events.length) {
+				continue;
+			}
+			let eventsToAdd = [];
+			switch(eventsToInclude) {
+				case 'Event per object':
+					eventsToAdd = events;
+					break;
+				case 'Object creation':
+					eventsToAdd.push(events[0]);
+					break;
+				case 'Object destruction':
+					eventsToAdd.push(events.at(-1));
+			}
+
+			for(let event of eventsToAdd) {
+				let objectType = this.model.ocel['ocel:objects'][objectIndex]['ocel:type'];
+				objectLifecycleData.push({
+					'index': idx,
+					'timestamp': new Date(event[2] * 1000),
+					'type': type == "Activity" ? event[1] : objectType,
+					'info': `${preInfoText}${objectType} (${objectIndex}) - ${event[1]} (${event[0]})`
+				});
+			}
+			idx++;
+		}
+		
+		return objectLifecycleData;
+	}
+
 	updateConfiguration() {
 		let previousRandomSamplingValue = this.randomSamplingValue;
 		let previousDatasetLength = this.currentDataset.length;
@@ -122,8 +182,9 @@ class DottedChart {
 		this.dotOpacity = document.getElementById('dottedChartDotOpacity').value / 100.0;
 
 		this.type = document.getElementById('dottedChartSelectCategory').value;
+		this.objectOrder = document.getElementById('dottedChartOrderObjects').checked ? 'ordered' : 'unordered';
 		this.currentDatasetName = document.getElementById('dottedChartSelectDataset').value;
-		this.currentDataset = this.data[this.currentDatasetName][this.type];
+		this.currentDataset = this.data[this.currentDatasetName][this.objectOrder][this.type];
 
 		this.allTypes = this.types[this.type];
 
@@ -135,6 +196,8 @@ class DottedChart {
 
 	buildDottedChart() {
 		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChart"});
+
+		console.log(this);
 
 		setTimeout(() => {
 			this.updateConfiguration();

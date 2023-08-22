@@ -1256,6 +1256,9 @@
 								<option value="Object type">Object type</option>
 							</select>
 							<br>
+							<label for="dottedChartOrderObjects">Order objects by creation time</label>
+							<input type="checkbox" id="dottedChartOrderObjects" name="dottedChartOrderObjects" onchange="dottedChart.buildDottedChart()" checked>
+							<br>
 							<label for="dottedChartRandomSamplingValue" title="Percentage of dots to be removed">Random sampling (%):</label>
 							<input type="number" id="dottedChartRandomSamplingValue" name="dottedChartRandomSamplingValue" title="Percentage of dots to be removed" min="0" max="99" value="0" onchange="changeDottedChartRandomSamplingValue(this)" style="width: 2.5em;"/>
 							<br>
@@ -1749,8 +1752,10 @@
 					if(newDataset == 'Event') {
 						$('#dottedChartSelectCategory').val('Activity').change();
 						$('#dottedChartSelectCategory > option[value="Object type"]').attr('disabled', 'disabled');
+						$('#dottedChartOrderObjects').attr('disabled', 'disabled');
 					} else {
 						$('#dottedChartSelectCategory > option[value="Object type"]').removeAttr('disabled');
+						$('#dottedChartOrderObjects').removeAttr('disabled');
 					}
 					dottedChart.buildDottedChart();
 				}

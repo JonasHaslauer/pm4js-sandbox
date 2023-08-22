@@ -123,11 +123,6 @@ class DottedChart {
 					eventsToAdd.push(events.at(-1));
 			}
 
-			if(objectId == 'AAA') {
-				console.log(idx);
-				console.log(eventsToAdd);
-			}
-
 			for(let event of eventsToAdd) {
 				let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
 				objectLifecycleData.push({
@@ -160,8 +155,6 @@ class DottedChart {
 		if(this.currentDatasetName == 'Event') this.currentDataset = this.createEventDataset();
 		else if(this.currentDatasetName == 'Object lifecycle') this.currentDataset = [...this.createObjectLifecycleDataset('Object creation', this.type, isObjectsSorted), ...this.createObjectLifecycleDataset('Object destruction', this.type, isObjectsSorted)]
 		else this.currentDataset = this.createObjectLifecycleDataset(this.currentDatasetName, this.type, isObjectsSorted)
-		
-		console.log(this.currentDataset);
 
 		this.allTypes = this.types[this.type];
 
@@ -198,7 +191,7 @@ class DottedChart {
 			}
 			for(let x of this.currentDataset) {
 				dataText[x.type].push(x.info);
-				if(isLifecyclePlot) symbol[x.type].push(x.info.split(' ')[0] == 'creation' ? 'circle' : 'cross');
+				if(isLifecyclePlot) symbol[x.type].push(x.info.split(' ')[1] == 'creation' ? 'circle' : 'cross');
 			}
 
 			let data = [];
@@ -249,9 +242,7 @@ class DottedChart {
 			case 'Timestamp':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					let timestamp = x.timestamp
-					if(this.randomSampling[i])
-						axisData[x.type].push(timestamp);
+					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp);
 				}
 				break;
 			case 'Index':

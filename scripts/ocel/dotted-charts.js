@@ -2,11 +2,6 @@ class DottedChart {
     constructor(model) {
 		this.data = {};
 
-		// DEBUG, TODO REMOVE
-		this.startTimestamps = {};
-		this.endTimestamps = {};
-		// END OF DEBUG
-
 		this.model = model;
 
 		this.types = {
@@ -18,18 +13,23 @@ class DottedChart {
 		this.data['Event per object'] = { 'Activity': this.createObjectLifecycleDataset('all', 'Activity'), 'Object type': this.createObjectLifecycleDataset('all', 'Object type')};
 		this.data['Object creation'] = { 'Activity': this.createObjectLifecycleDataset('creation', 'Activity'), 'Object type': this.createObjectLifecycleDataset('creation', 'Object type')};
 		this.data['Object destruction'] = { 'Activity': this.createObjectLifecycleDataset('destruction', 'Activity'), 'Object type': this.createObjectLifecycleDataset('destruction', 'Object type')};
-		
+
+		this.data['Object lifecycle'] = { 
+			'Activity': [...this.data['Object creation']['Activity'], ...this.data['Object destruction']['Activity']],
+			'Object type': [...this.data['Object creation']['Object type'], ...this.data['Object destruction']['Object type']] 
+		};
+		/*for(let i = 0; i < this.data['Object creation']['Activity'].length; i++) {
+			this.data['Object lifecycle']['Activity'].push(this.data['Object creation']['Activity'][i]);
+			this.data['Object lifecycle']['Activity'].push(this.data['Object destruction']['Activity'][i]);
+			this.data['Object lifecycle']['Object type'].push(this.data['Object creation']['Object type'][i]);
+			this.data['Object lifecycle']['Object type'].push(this.data['Object destruction']['Object type'][i]);
+		}*/
+
+		this.currentDataset = this.data['Event']['Activity'];
+
+		this.randomSampling = Array.from(this.currentDataset.length, () => true);
+
 		this.buildDottedChart();
-	}
-
-	startTime(name) {
-		this.startTimestamps[name] = new Date();
-	}
-
-	endTime(name) {
-		this.endTimestamps[name] = new Date();
-		let elapsedTime = this.endTimestamps[name] - this.startTimestamps[name];
-		console.log(`${name}: ${elapsedTime} ms | ${elapsedTime / 1000} s`);
 	}
 
 	createEventDataset() {
@@ -78,6 +78,8 @@ class DottedChart {
 		}
 		objectCreation.sort((a, b) => a[1] - b[1]);
 
+		let preInfoText = eventsToInclude == 'all' ? '' : eventsToInclude + ' of ';
+
 		for (let objectIndex in objectCreation) {
 			let objectId = objectCreation[objectIndex][0];
 			let events = objectEventRelations[objectId];
@@ -97,11 +99,12 @@ class DottedChart {
 			}
 
 			for(let event of eventsToAdd) {
+				let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
 				objectLifecycleData.push({
 					'index': objectIndex,
 					'timestamp': new Date(event[2] * 1000),
-					'type': type == "Activity" ? event[1] : this.model.ocel['ocel:objects'][objectId]['ocel:type'],
-					'info': objectId
+					'type': type == "Activity" ? event[1] : objectType,
+					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`
 				});
 			}
 		}
@@ -110,55 +113,91 @@ class DottedChart {
 	}
 
 	updateConfiguration() {
+		let previousRandomSamplingValue = this.randomSamplingValue;
+		let previousDatasetLength = this.currentDataset.length;
+
 		this.x = document.getElementById('dottedChartSelectX').value;
 		this.y = document.getElementById('dottedChartSelectY').value;
 		this.dotSize = document.getElementById('dottedChartDotSize').value;
+		this.dotOpacity = document.getElementById('dottedChartDotOpacity').value / 100.0;
 
 		this.type = document.getElementById('dottedChartSelectCategory').value;
-		this.currentDataset = this.data[document.getElementById('dottedChartSelectDataset').value][this.type];
+		this.currentDatasetName = document.getElementById('dottedChartSelectDataset').value;
+		this.currentDataset = this.data[this.currentDatasetName][this.type];
 
-		
 		this.allTypes = this.types[this.type];
+
+		this.randomSamplingValue = document.getElementById('dottedChartRandomSamplingValue').value / 100.0;
+		if(previousRandomSamplingValue !== this.randomSamplingValue || previousDatasetLength !== this.currentDataset.length) {
+			this.randomSampling = Array.from(this.currentDataset, () => Math.random() >= this.randomSamplingValue);
+		}
 	}
 
 	buildDottedChart() {
-		this.updateConfiguration();
+		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChart"});
 
-		console.log(this);
+		setTimeout(() => {
+			this.updateConfiguration();
+			let isLifecyclePlot = this.currentDatasetName == 'Object lifecycle';
 
-		let dataX = this.createAxis(this.x);
-		let dataY = this.createAxis(this.y);
+			let dataX = this.createAxis(this.x);
+			let dataY = this.createAxis(this.y);
 
-		let dataText = {};
-		for(let type of this.allTypes) {
-			dataText[type] = [];
-		}
-		for(let x of this.currentDataset) {
-			dataText[x.type].push(x.info);
-		}
-
-		let data = [];
-		for(let type of this.allTypes) {
-			data.push( {'x': dataX[type], 'y': dataY[type], 'text': dataText[type], 'type': 'scattergl', 'mode': 'markers', 'marker': { 'size': this.dotSize }, 'name': type} );
-		}
-
-		console.log(data);
-
-		var layout = {
-			title: `Dotted Chart - ${this.type}`,
-			xaxis: {
-				title: this.x,
-				automargin: true
-			},
-			yaxis: {
-				title: this.y,
-				automargin: true
-			},
-			font: {
-				size: 19
+			let symbol = 'circle';
+			switch(this.currentDatasetName) {
+				case 'Object destruction':
+					symbol = 'cross';
+					break;
+				case 'Object lifecycle':
+					symbol = {};
+					break; 
 			}
-		};
-		Plotly.newPlot('plotlyDottedChart', data, layout, {responsive: true});
+
+			let dataText = {};
+			for(let type of this.allTypes) {
+				dataText[type] = [];
+				if(isLifecyclePlot) symbol[type] = [];
+			}
+			for(let x of this.currentDataset) {
+				dataText[x.type].push(x.info);
+				if(isLifecyclePlot) symbol[x.type].push(x.info.split(' ')[0] == 'creation' ? 'circle' : 'cross');
+			}
+
+			let data = [];
+			for(let type of this.allTypes) {
+				data.push({
+					'x': dataX[type],
+					'y': dataY[type],
+					'text': dataText[type],
+					'type': 'scattergl',
+					'mode': 'markers',
+					'marker': { 
+						'size': this.dotSize,
+						'symbol': isLifecyclePlot ? symbol[type] : symbol
+					},
+					'opacity': this.dotOpacity,
+					'name': type
+				});
+			}
+
+			var layout = {
+				title: `Dotted Chart - ${this.type}`,
+				xaxis: {
+					title: this.x,
+					automargin: true
+				},
+				yaxis: {
+					title: this.y,
+					automargin: true
+				},
+				font: {
+					size: 19
+				}
+			};
+			Plotly.newPlot('plotlyDottedChart', data, layout, {responsive: true});
+
+			Pm4JS.stopAlgorithm(thisUuid, {});
+		}, 100);
 	}
 
 	createAxis(axisType) {
@@ -168,116 +207,47 @@ class DottedChart {
 		}		
 
 		let data = this.currentDataset;
-		console.log(data);
 		switch(axisType) {
 			case 'Timestamp':
-				for(let x of data) {
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
 					let timestamp = x.timestamp
-					axisData[x.type].push(timestamp.getFullYear() + '-' + (timestamp.getMonth() + 1) + '-' + timestamp.getDate() + ' ' + timestamp.getHours() + ':' + timestamp.getMinutes() + ':' + timestamp.getSeconds());
+					if(this.randomSampling[i])
+						axisData[x.type].push(timestamp.getFullYear() + '-' + (timestamp.getMonth() + 1) + '-' + timestamp.getDate() + ' ' + timestamp.getHours() + ':' + timestamp.getMinutes() + ':' + timestamp.getSeconds());
 				}
 				break;
 			case 'Index':
-				for(let x of data) {
-					axisData[x.type].push(x.index);
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x.type].push(x.index);
 				}
 				break;
-			case 'Name':
-				for(let x of data) {
-					axisData[x.type].push(x.type);
+			case 'Category':
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x.type].push(x.type);
 				}
 				break;
 			case 'Day of week':
-				for(let x of data) {
-					axisData[x.type].push(x.timestamp.toLocaleDateString('en-EN', { weekday: 'long' }));
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp.toLocaleDateString('en-EN', { weekday: 'long' }));
 				}
 				break;	
 			case 'Time of day [m]':
-				for(let x of data) {
-					axisData[x.type].push(x.timestamp.getHours() * 60 + x.timestamp.getMinutes());
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp.getHours() * 60 + x.timestamp.getMinutes());
 				}
 				break;
 			case 'Time of day [h]':
-				for(let x of data) {
-					axisData[x.type].push(x.timestamp.getHours() + x.timestamp.getMinutes() / 60);
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp.getHours() + x.timestamp.getMinutes() / 60);
 				}
 				break;	
 		}
 
 		return axisData;
-	}
-
-    buildDottedChartActivities() {
-		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChartActivities"});
-
-		setTimeout(() => {
-			let objectsIds = this.model.overallObjectsView.objectsIdsSorted;
-			let serie = [];
-			for (let objId in objectsIds) {
-				try {
-					// objectsIdsSorted[objId] --> array of events containing the object
-					// each event is array ['eventId', 'activity', timestamp (s)]
-					let relEve = objectsIds[objId];
-					// select timestamp of the first event the object is contained in
-					let firstTimestamp = relEve[0][2];
-					// add array containing objectId and timestamp of event where object appears first
-					// serie.push({ 'objectId': objId, 'creationTimestamp': firstTimestamp })
-					serie.push([objId, firstTimestamp]);
-				}
-				catch (err) {
-				}
-			}
-			// sort objects by creation timestamp
-			serie.sort((a, b) => a[1] - b[1]);
-
-			// prepare object containing data for plot
-			let dataPerActivity = {};
-			let activities = Object.keys(this.model.overallEventsView.activities).sort();
-			for(let activity of activities) {
-				dataPerActivity[activity] = {x: [], y: [], type: "scattergl", mode: "markers", marker: { "size": 3 }, name: activity};
-			}
-
-			for (let objectIndex in serie) {
-				// el = array containing objectId and timestamp of event where object appears first
-				let el = serie[objectIndex];
-				// get objectId
-				let objId = el[0];
-				// get all events where current object is included
-				let relEve = objectsIds[objId];
-
-				
-				// iterate over events
-				for (let eve of relEve) {
-					let activity = eve[1];
-					let timestamp = eve[2];
-					let timestampDate = new Date(timestamp*1000);
-					let timestampStru = timestampDate.getFullYear()  + "-" + (timestampDate.getMonth()+1) + "-" + timestampDate.getDate() + " " + timestampDate.getHours()+":"+timestampDate.getMinutes()+":"+timestampDate.getSeconds();
-					dataPerActivity[activity].x.push(timestampStru);
-					dataPerActivity[activity].y.push(objectIndex);
-				}
-					
-			}
-			
-			var data = [];
-			for (let activity of activities) {
-				data.push(dataPerActivity[activity]);
-			}
-			console.log(data);
-			var layout = {
-				title: "Dotted Chart (color: activity)",
-				xaxis: {
-					title: "Timestamp",
-					automargin: true
-				},
-				yaxis: {
-					title: "Object index",
-					automargin: true
-				},
-				font: {
-					size: 19
-				}
-			};
-			Plotly.newPlot('plotlyDottedChart', data, layout, {responsive: true});
-			Pm4JS.stopAlgorithm(thisUuid, {});
-		}, 100);
 	}
 }

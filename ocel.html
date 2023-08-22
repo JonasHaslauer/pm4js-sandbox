@@ -1217,42 +1217,58 @@
 						</table>
 					</div>
 				</div>
-				<div id="dottedChartPage" style="display: none; font-size: 15pt;">
-					<div class="container">
-						<div class="row-1">
-							<select id="dottedChartSelectX" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
-								<option value="Timestamp" selected>Timestamp</option>
-								<option value="Index">Index</option>
-								<option value="Name">Name</option>
-								<option value="Day of week">Day of week</option>
-								<option value="Time of day [m]">Time of day [m]</option>
-								<option value="Time of day [h]">Time of day [h]</option>
-							</select>
-							<select id="dottedChartSelectY" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
-								<option value="Timestamp">Timestamp</option>
-								<option value="Index" selected>Index</option>
-								<option value="Name">Name</option>
-								<option value="Day of week">Day of week</option>
-								<option value="Time of day [m]">Time of day [m]</option>
-								<option value="Time of day [h]">Time of day [h]</option>
-							</select>
+				<div id="dottedChartPage" style="display: none;">
+					<div class="row" style="height: 85%">
+						<div class="col-2 border-right">
+							<h6><span style="font-size: 16pt">Configuration</span></h6>
+							<label for="dottedChartSelectDataset">Viewpoint:</label>
 							<select id="dottedChartSelectDataset" style="font-size: 16pt" onchange="changeDottedChartDataset(this.value)">
-								<option value="Event" selected>Event</option>
-								<option value="Event per object">Event per object</option>
+								<option value="Event">Event</option>
+								<option value="Event per object" selected>Event per object</option>
+								<option value="Object lifecycle">Object lifecycle</option>
 								<option value="Object creation">Object creation</option>
 								<option value="Object destruction">Object destruction</option>
 							</select>
+							<br>
+							<label for="dottedChartSelectX">X:</label>
+							<select id="dottedChartSelectX" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
+								<option value="Timestamp" selected>Timestamp</option>
+								<option value="Index">Index</option>
+								<option value="Category">Category</option>
+								<option value="Day of week">Day of week</option>
+								<option value="Time of day [m]">Time of day [m]</option>
+								<option value="Time of day [h]">Time of day [h]</option>
+							</select>
+							<br>
+							<label for="dottedChartSelectY">Y:</label>
+							<select id="dottedChartSelectY" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
+								<option value="Timestamp">Timestamp</option>
+								<option value="Index" selected>Index</option>
+								<option value="Category">Category</option>
+								<option value="Day of week">Day of week</option>
+								<option value="Time of day [m]">Time of day [m]</option>
+								<option value="Time of day [h]">Time of day [h]</option>
+							</select>
+							<br>
+							<label for="dottedChartSelectCategory">Categorize by:</label>
 							<select id="dottedChartSelectCategory" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
 								<option value="Activity" selected>Activity</option>
 								<option value="Object type" disabled>Object type</option>
 							</select>
-							<label for="dottedChartDotSize">Size of dots (1-10):</label>
-							<input type="number" id="dottedChartDotSize" name="tentacles" min="1" max="10" value="4" onchange="dottedChart.buildDottedChart()"/>
+							<br>
+							<label for="dottedChartRandomSamplingValue" title="Percentage of dots to be removed">Random sampling (%):</label>
+							<input type="number" id="dottedChartRandomSamplingValue" name="dottedChartRandomSamplingValue" title="Percentage of dots to be removed" min="0" max="99" value="0" onchange="changeDottedChartRandomSamplingValue(this)" style="width: 2.5em;"/>
+							<br>
+							<label for="dottedChartDotSize">Size of dots:</label>
+							<input type="number" id="dottedChartDotSize" name="dottedChartDotSize" min="1" max="99" value="5" onchange="dottedChart.buildDottedChart()" style="width: 2.5em;"/>
+							<br>
+							<label for="dottedChartDotOpacity">Opacity of dots (%):</label>
+							<input type="number" id="dottedChartDotOpacity" name="dottedChartDotOpacity" min="1" max="100" step="5" value="100" onchange="changeDottedChartDotOpacity(this)" style="width: 3.2em;"/>
 						</div>
-						</div class="row-2">
-							<div id="plotlyDottedChart" style="width: 100%; height: 80%;"></div>
+						<div class="col-10">
+							<div id="plotlyDottedChart" style="width: 100%; height: 100%;"></div>
+						</div>
 					</div>
-				</div>
 				</div>
 				<div class="hover_bkgr_fricc">
 					<span class="helper"></span>
@@ -1727,11 +1743,6 @@
 					hideAllDivsPages();
 					dottedChart = new DottedChart(visualization.model);
 					document.getElementById("dottedChartPage").style.display = "";
-					document.getElementById("dottedChartSelectX").style.display = "";
-					document.getElementById("dottedChartSelectY").style.display = "";
-					document.getElementById("dottedChartSelectDataset").style.display = "";
-					document.getElementById("dottedChartSelectCategory").style.display = "";
-					document.getElementById("plotlyDottedChart").style.display = "";
 				}
 
 				function changeDottedChartDataset(newDataset) {
@@ -1741,6 +1752,26 @@
 					} else {
 						$('#dottedChartSelectCategory > option[value="Object type"]').removeAttr('disabled');
 					}
+					dottedChart.buildDottedChart();
+				}
+
+				function changeDottedChartRandomSamplingValue(randomSamplingInput) {
+					if(randomSamplingInput.value < 0) {
+						randomSamplingInput.value = 0;
+					} else if(randomSamplingInput.value > 99) {
+						randomSamplingInput.value = 99;
+					}
+
+					dottedChart.buildDottedChart();
+				}
+
+				function changeDottedChartDotOpacity(dotOpacityInput) {
+					if(dotOpacityInput.value < 1) {
+						dotOpacityInput.value = 1;
+					} else if(dotOpacityInput.value > 100) {
+						dotOpacityInput.value = 100;
+					}
+
 					dottedChart.buildDottedChart();
 				}
 

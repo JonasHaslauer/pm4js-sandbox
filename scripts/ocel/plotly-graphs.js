@@ -144,8 +144,6 @@ class PlotlyOcelGraphs {
 				}
 			}
 			serie = serie.sort((a, b) => a - b);
-			console.log(serie);
-			console.log(serie[serie.length - 1]);
 			var y0 = [];
 			var y1 = [];
 			for (var i = 0; i < 50; i ++) {
@@ -215,8 +213,6 @@ class PlotlyOcelGraphs {
 		let self = this;
 		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChartActivities"});
 
-		console.log(this.model);
-
 		setTimeout(function() {
 			let objectsIds = self.model.overallObjectsView.objectsIdsSorted;
 			let serie = [];
@@ -229,7 +225,6 @@ class PlotlyOcelGraphs {
 				catch (err) {
 				}
 			}
-			console.log(serie.length)
 			serie.sort((a, b) => a[1] - b[1]);
 			let allColors = {};
 			let prob = 500 / serie.length;
@@ -245,7 +240,7 @@ class PlotlyOcelGraphs {
 						let timestampDate = new Date(timestamp*1000);
 						let timestampStru = timestampDate.getFullYear()  + "-" + (timestampDate.getMonth()+1) + "-" + timestampDate.getDate() + " " + timestampDate.getHours()+":"+timestampDate.getMinutes()+":"+timestampDate.getSeconds();
 						if (!(activity in allColors)) {
-							allColors[activity] = {x: [], y: [], type: "scatter", mode: "markers", name: activity};
+							allColors[activity] = {x: [], y: [], type: "scattergl", mode: "markers", name: activity};
 						}
 						allColors[activity].x.push(timestampStru);
 						allColors[activity].y.push(elCount);
@@ -306,7 +301,7 @@ class PlotlyOcelGraphs {
 						let timestampDate = new Date(timestamp*1000);
 						let timestampStru = timestampDate.getFullYear()  + "-" + (timestampDate.getMonth()+1) + "-" + timestampDate.getDate() + " " + timestampDate.getHours()+":"+timestampDate.getMinutes()+":"+timestampDate.getSeconds();
 						if (!(objType in allColors)) {
-							allColors[objType] = {x: [], y: [], type: "scatter", mode: "markers", name: objType};
+							allColors[objType] = {x: [], y: [], type: "scattergl", mode: "markers", name: objType};
 						}
 						allColors[objType].x.push(timestampStru);
 						allColors[objType].y.push(elCount);

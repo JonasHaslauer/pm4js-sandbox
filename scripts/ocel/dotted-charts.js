@@ -181,7 +181,7 @@ class DottedChart {
 			}
 
 			var layout = {
-				title: `Dotted Chart - ${this.type}`,
+				title: `Dotted Chart - ${this.currentDatasetName}`,
 				xaxis: {
 					title: this.x,
 					automargin: true

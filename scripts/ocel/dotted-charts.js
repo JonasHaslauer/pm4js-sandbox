@@ -106,8 +106,8 @@ class DottedChart {
 		let preInfoText = eventsToInclude == 'Event per object' ? '' : eventsToInclude + ' of ';
 
 		let idx = 0;
-		for(let objectIndex in this.model.ocel['ocel:objects']) {
-			let events = objectEventRelations[objectIndex];
+		for(let objectId in this.model.ocel['ocel:objects']) {
+			let events = objectEventRelations[objectId];
 			if(!events.length) {
 				continue;
 			}
@@ -123,13 +123,18 @@ class DottedChart {
 					eventsToAdd.push(events.at(-1));
 			}
 
+			if(objectId == 'AAA') {
+				console.log(idx);
+				console.log(eventsToAdd);
+			}
+
 			for(let event of eventsToAdd) {
-				let objectType = this.model.ocel['ocel:objects'][objectIndex]['ocel:type'];
+				let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
 				objectLifecycleData.push({
 					'index': idx,
 					'timestamp': new Date(event[2] * 1000),
 					'type': type == "Activity" ? event[1] : objectType,
-					'info': `${preInfoText}${objectType} (${objectIndex}) - ${event[1]} (${event[0]})`
+					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`
 				});
 			}
 			idx++;
@@ -156,6 +161,8 @@ class DottedChart {
 		else if(this.currentDatasetName == 'Object lifecycle') this.currentDataset = [...this.createObjectLifecycleDataset('Object creation', this.type, isObjectsSorted), ...this.createObjectLifecycleDataset('Object destruction', this.type, isObjectsSorted)]
 		else this.currentDataset = this.createObjectLifecycleDataset(this.currentDatasetName, this.type, isObjectsSorted)
 		
+		console.log(this.currentDataset);
+
 		this.allTypes = this.types[this.type];
 
 		this.randomSamplingValue = document.getElementById('dottedChartRandomSamplingValue').value / 100.0;
@@ -244,7 +251,7 @@ class DottedChart {
 					let x = data[i];
 					let timestamp = x.timestamp
 					if(this.randomSampling[i])
-						axisData[x.type].push(timestamp.getFullYear() + '-' + (timestamp.getMonth() + 1) + '-' + timestamp.getDate() + ' ' + timestamp.getHours() + ':' + timestamp.getMinutes() + ':' + timestamp.getSeconds());
+						axisData[x.type].push(timestamp);
 				}
 				break;
 			case 'Index':

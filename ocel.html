@@ -1231,7 +1231,7 @@
 							</select>
 							<br>
 							<label for="dottedChartSelectX">X:</label>
-							<select id="dottedChartSelectX" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
+							<select id="dottedChartSelectX" style="font-size: 16pt" onchange="changeDottedChartAxis()">
 								<option value="Timestamp" selected>Timestamp</option>
 								<option value="Index">Index</option>
 								<option value="Category">Category</option>
@@ -1241,7 +1241,7 @@
 							</select>
 							<br>
 							<label for="dottedChartSelectY">Y:</label>
-							<select id="dottedChartSelectY" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
+							<select id="dottedChartSelectY" style="font-size: 16pt" onchange="changeDottedChartAxis()">
 								<option value="Timestamp">Timestamp</option>
 								<option value="Index" selected>Index</option>
 								<option value="Category">Category</option>
@@ -1256,9 +1256,12 @@
 								<option value="Object type">Object type</option>
 							</select>
 							<br>
-							<label id="dottedChartOrderObjectsLabel" for="dottedChartOrderObjects">Order objects by creation time</label>
-							<input type="checkbox" id="dottedChartOrderObjects" name="dottedChartOrderObjects" onchange="dottedChart.buildDottedChart()" checked>
-							<br id="dottedChartOrderObjectsBr">
+							<label id="dottedChartSelectOrderSortingLabel" for="dottedChartSelectOrderSorting">Sort index by:</label>
+							<select id="dottedChartSelectOrderSorting" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()" checked>
+								<option value="Creation time" selected>Creation time</option>
+								<option value="Creation time + object type">Creation time + object type</option>
+							</select>
+							<br id="dottedChartSelectOrderSortingBr">
 							<label for="dottedChartRandomSamplingValue" title="Percentage of dots to be removed">Random sampling (%):</label>
 							<input type="number" id="dottedChartRandomSamplingValue" name="dottedChartRandomSamplingValue" title="Percentage of dots to be removed" min="0" max="99" value="0" onchange="changeDottedChartRandomSamplingValue(this)" style="width: 2.5em;"/>
 							<br>
@@ -1752,16 +1755,31 @@
 					if(newDataset == 'Event') {
 						$('#dottedChartSelectCategory').val('Activity').change();
 						$('#dottedChartSelectCategory > option[value="Object type"]').attr('disabled', 'disabled');
-						$('#dottedChartOrderObjectsLabel').attr('hidden', 'hidden');
-						$('#dottedChartOrderObjects').attr('hidden', 'hidden');
-						$('#dottedChartOrderObjectsBr').attr('hidden', 'hidden');
+						
 					} else {
 						$('#dottedChartSelectCategory > option[value="Object type"]').removeAttr('disabled');
-						$('#dottedChartOrderObjectsLabel').removeAttr('hidden');
-						$('#dottedChartOrderObjects').removeAttr('hidden');
-						$('#dottedChartOrderObjectsBr').removeAttr('hidden');
 					}
+
+					setDottedChartSelectOrderSortingVisibility();
+
 					dottedChart.buildDottedChart();
+				}
+
+				function changeDottedChartAxis() {
+					setDottedChartSelectOrderSortingVisibility();
+					dottedChart.buildDottedChart();
+				}
+
+				function setDottedChartSelectOrderSortingVisibility() {	
+					if($('#dottedChartSelectDataset').val() != 'Event' && ($('#dottedChartSelectX').val() == 'Index' || $('#dottedChartSelectY').val() == 'Index')) {
+						$('#dottedChartSelectOrderSortingLabel').removeAttr('hidden');
+						$('#dottedChartSelectOrderSorting').removeAttr('hidden');
+						$('#dottedChartSelectOrderSortingBr').removeAttr('hidden');
+					} else {
+						$('#dottedChartSelectOrderSortingLabel').attr('hidden', 'hidden');
+						$('#dottedChartSelectOrderSorting').attr('hidden', 'hidden');
+						$('#dottedChartSelectOrderSortingBr').attr('hidden', 'hidden');
+					}			
 				}
 
 				function changeDottedChartRandomSamplingValue(randomSamplingInput) {

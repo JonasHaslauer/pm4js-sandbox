@@ -7,6 +7,14 @@ class DottedChart {
 			'Object type': Object.keys(this.model.otObjectsView).sort()
 		};
 
+		this.datasets = {
+			"Event": null,
+			"Event per object": null,
+			"Object lifecycle": null,
+			"Object creation": null,
+			"Object destruction": null
+		};
+
 		this.currentDataset = [];
 
 		this.buildDottedChart();
@@ -29,8 +37,10 @@ class DottedChart {
 			eventId = parseInt(eventId);
 			eventData[eventId] = {
 				'index': parseInt(eventId),
-				'type': event['ocel:activity'],
 				'timestamp': new Date(event['ocel:timestamp']),
+				'Activity': event['ocel:activity'],
+				'Object type': event['ocel:activity'],
+				'objectId': null,
 				'info': `${eventId}: ${[...relatedObjectTypes].join(', ')} (${event['ocel:omap'].slice(0, 9).join(', ')}${event['ocel:omap'].length > 8 ? ', ...' : ''})`
 			}
 		}
@@ -39,18 +49,8 @@ class DottedChart {
 		return eventData;
 	}
 
-	/*
-	eventsToInclude = 'Event per object', 'Object creation', 'Object destruction'
-	type = 'Activity', 'Object type'
-	*/
-	createObjectLifecycleDataset(eventsToInclude, type, ordered) {
-		if(ordered) {
-			return this.createOrderedObjectLifecycleDataset(eventsToInclude, type);
-		}
-		return this.createUnorderedObjectLifecycleDataset(eventsToInclude, type);
-	}
-
-	createOrderedObjectLifecycleDataset(eventsToInclude, type) {
+	// eventsToInclude = 'Event per object', 'Object creation', 'Object destruction'
+	createObjectLifecycleDataset(eventsToInclude) {
 		let objectLifecycleData = [];
 
 		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
@@ -90,49 +90,12 @@ class DottedChart {
 				objectLifecycleData.push({
 					'index': objectIndex,
 					'timestamp': new Date(event[2] * 1000),
-					'type': type == "Activity" ? event[1] : objectType,
+					'Activity': event[1],
+					'Object type': objectType,
+					'objectId': objectId,
 					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`
 				});
 			}
-		}
-		
-		return objectLifecycleData;
-	}
-
-	createUnorderedObjectLifecycleDataset(eventsToInclude, type) {
-		let objectLifecycleData = [];
-		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
-
-		let preInfoText = eventsToInclude == 'Event per object' ? '' : eventsToInclude + ' of ';
-
-		let idx = 0;
-		for(let objectId in this.model.ocel['ocel:objects']) {
-			let events = objectEventRelations[objectId];
-			if(!events.length) {
-				continue;
-			}
-			let eventsToAdd = [];
-			switch(eventsToInclude) {
-				case 'Event per object':
-					eventsToAdd = events;
-					break;
-				case 'Object creation':
-					eventsToAdd.push(events[0]);
-					break;
-				case 'Object destruction':
-					eventsToAdd.push(events.at(-1));
-			}
-
-			for(let event of eventsToAdd) {
-				let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
-				objectLifecycleData.push({
-					'index': idx,
-					'timestamp': new Date(event[2] * 1000),
-					'type': type == "Activity" ? event[1] : objectType,
-					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`
-				});
-			}
-			idx++;
 		}
 		
 		return objectLifecycleData;
@@ -142,20 +105,47 @@ class DottedChart {
 		let previousRandomSamplingValue = this.randomSamplingValue;
 		let previousDatasetLength = this.currentDataset.length;
 
+		// possible values: "Timestamp", "Index", "Category", "Day of week", "Time of day [m]", "Time of day [h]"
 		this.x = document.getElementById('dottedChartSelectX').value;
 		this.y = document.getElementById('dottedChartSelectY').value;
+
 		this.dotSize = document.getElementById('dottedChartDotSize').value;
 		this.dotOpacity = document.getElementById('dottedChartDotOpacity').value / 100.0;
 
+		// possible values: "Activity", "Object type"
 		this.type = document.getElementById('dottedChartSelectCategory').value;
+
+		// possible values: "Event", "Event per object", "Object lifecycle", "Object creation", "Object destruction"
 		this.currentDatasetName = document.getElementById('dottedChartSelectDataset').value;
 
-		let isObjectsSorted = document.getElementById('dottedChartOrderObjects').checked;
+		// possible values: "Creation time", "Creation time + object type"
+		let sortObjectsBy = document.getElementById('dottedChartSelectOrderSorting').value; 
 
-		if(this.currentDatasetName == 'Event') this.currentDataset = this.createEventDataset();
-		else if(this.currentDatasetName == 'Object lifecycle') this.currentDataset = [...this.createObjectLifecycleDataset('Object creation', this.type, isObjectsSorted), ...this.createObjectLifecycleDataset('Object destruction', this.type, isObjectsSorted)]
-		else this.currentDataset = this.createObjectLifecycleDataset(this.currentDatasetName, this.type, isObjectsSorted)
+		// if dataset was not created yet, create it
+		if(!this.datasets[this.currentDatasetName]) {
+			console.log('create dataset');
+			if(this.currentDatasetName == 'Event') this.datasets[this.currentDatasetName] = this.createEventDataset();
+			else if(this.currentDatasetName == 'Object lifecycle') this.datasets[this.currentDatasetName] = [...this.createObjectLifecycleDataset('Object creation'), ...this.createObjectLifecycleDataset('Object destruction')]
+			else this.datasets[this.currentDatasetName] = this.createObjectLifecycleDataset(this.currentDatasetName)
+		}
 
+		// change dataset to use and sort it if necessary
+		if(this.currentDatasetName == 'Event') this.currentDataset = this.datasets[this.currentDatasetName]; // do not sort event dataset
+		switch(sortObjectsBy) {
+			case 'Creation time + object type':
+				this.currentDataset = structuredClone(this.datasets[this.currentDatasetName]).sort( (a, b) =>  a['Object type'].localeCompare(b['Object type']) );
+				let objectIdIndexMapping = {};
+				let newIndex = 0;
+				for(let x of this.currentDataset) {
+					if(!objectIdIndexMapping[x.objectId]) objectIdIndexMapping[x.objectId] = newIndex++;
+					x.index = objectIdIndexMapping[x.objectId];
+				}
+				break;
+			default:
+				this.currentDataset = this.datasets[this.currentDatasetName];
+				break;
+		}
+		
 		this.allTypes = this.types[this.type];
 
 		this.randomSamplingValue = document.getElementById('dottedChartRandomSamplingValue').value / 100.0;
@@ -166,6 +156,8 @@ class DottedChart {
 
 	buildDottedChart() {
 		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChart"});
+
+		console.log(this)
 
 		setTimeout(() => {
 			this.updateConfiguration();
@@ -190,8 +182,8 @@ class DottedChart {
 				if(isLifecyclePlot) symbol[type] = [];
 			}
 			for(let x of this.currentDataset) {
-				dataText[x.type].push(x.info);
-				if(isLifecyclePlot) symbol[x.type].push(x.info.split(' ')[1] == 'creation' ? 'circle' : 'cross');
+				dataText[x[this.type]].push(x.info);
+				if(isLifecyclePlot) symbol[x[this.type]].push(x.info.split(' ')[1] == 'creation' ? 'circle' : 'cross');
 			}
 
 			let data = [];
@@ -242,37 +234,37 @@ class DottedChart {
 			case 'Timestamp':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp);
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timestamp);
 				}
 				break;
 			case 'Index':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x.type].push(x.index);
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.index);
 				}
 				break;
 			case 'Category':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x.type].push(x.type);
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x[this.type]);
 				}
 				break;
 			case 'Day of week':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp.toLocaleDateString('en-EN', { weekday: 'long' }));
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timestamp.toLocaleDateString('en-EN', { weekday: 'long' }));
 				}
 				break;	
 			case 'Time of day [m]':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp.getHours() * 60 + x.timestamp.getMinutes());
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timestamp.getHours() * 60 + x.timestamp.getMinutes());
 				}
 				break;
 			case 'Time of day [h]':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x.type].push(x.timestamp.getHours() + x.timestamp.getMinutes() / 60);
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timestamp.getHours() + x.timestamp.getMinutes() / 60);
 				}
 				break;	
 		}

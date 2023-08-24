@@ -69,6 +69,7 @@ class DottedChart {
 
 		for (let objectIndex in objectCreation) {
 			let objectId = objectCreation[objectIndex][0];
+			let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
 			let events = objectEventRelations[objectId];
 
 			if(!events.length) continue;
@@ -86,7 +87,6 @@ class DottedChart {
 			}
 
 			for(let event of eventsToAdd) {
-				let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
 				objectLifecycleData.push({
 					'index': objectIndex,
 					'timestamp': new Date(event[2] * 1000),
@@ -103,7 +103,7 @@ class DottedChart {
 
 	updateConfiguration() {
 		let previousRandomSamplingValue = this.randomSamplingValue;
-		let previousDatasetLength = this.currentDataset.length;
+		let previousDatasetName = this.currentDatasetName;
 
 		// possible values: "Timestamp", "Index", "Category", "Day of week", "Time of day [m]", "Time of day [h]"
 		this.x = document.getElementById('dottedChartSelectX').value;
@@ -133,6 +133,7 @@ class DottedChart {
 		if(this.currentDatasetName == 'Event') this.currentDataset = this.datasets[this.currentDatasetName]; // do not sort event dataset
 		switch(sortObjectsBy) {
 			case 'Creation time + object type':
+				// create deep copy of dataset and sort it by object type, creation time sorting is preserved
 				this.currentDataset = structuredClone(this.datasets[this.currentDatasetName]).sort( (a, b) =>  a['Object type'].localeCompare(b['Object type']) );
 				let objectIdIndexMapping = {};
 				let newIndex = 0;
@@ -149,7 +150,7 @@ class DottedChart {
 		this.allTypes = this.types[this.type];
 
 		this.randomSamplingValue = document.getElementById('dottedChartRandomSamplingValue').value / 100.0;
-		if(previousRandomSamplingValue !== this.randomSamplingValue || previousDatasetLength !== this.currentDataset.length) {
+		if(previousRandomSamplingValue !== this.randomSamplingValue || previousDatasetName !== this.currentDatasetName) {
 			this.randomSampling = Array.from(this.currentDataset, () => Math.random() >= this.randomSamplingValue);
 		}
 	}
@@ -181,9 +182,12 @@ class DottedChart {
 				dataText[type] = [];
 				if(isLifecyclePlot) symbol[type] = [];
 			}
-			for(let x of this.currentDataset) {
-				dataText[x[this.type]].push(x.info);
-				if(isLifecyclePlot) symbol[x[this.type]].push(x.info.split(' ')[1] == 'creation' ? 'circle' : 'cross');
+			for(let i = 0; i > this.currentDataset.length; i++) {
+				if(this.randomSampling[i]) {
+					let x = this.currentDataset[i];
+					dataText[x[this.type]].push(x.info);
+					if(isLifecyclePlot) symbol[x[this.type]].push(x.info.split(' ')[1] == 'creation' ? 'circle' : 'cross');
+				}
 			}
 
 			let data = [];

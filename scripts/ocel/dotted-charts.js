@@ -7,6 +7,20 @@ class DottedChart {
 			'Object type': Object.keys(this.model.otObjectsView).sort()
 		};
 
+		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
+
+		// sort objectIds by their creation date, makes graphs look better/easier to read
+		this.objectIdsByCreation = [];
+		this.objectCreationData = {}
+		for (let objectId in objectEventRelations) {
+			let relatedEvents = objectEventRelations[objectId];
+			if(!relatedEvents.length) continue;
+			let firstTimestamp = new Date(relatedEvents[0][2] * 1000);
+			this.objectIdsByCreation.push({ 'objectId': objectId, 'creationTime': firstTimestamp });
+			this.objectCreationData[objectId] = firstTimestamp;
+		}
+		this.objectIdsByCreation.sort((a, b) => a.creationTime - b.creationTime);
+
 		this.datasets = {
 			"Event": null,
 			"Event per object": null,
@@ -16,27 +30,7 @@ class DottedChart {
 		};
 
 		this.currentDataset = [];
-
-		this.measureTime('Event', () => {
-			this.createEventDataset();
-		});
-
-		this.measureTime('Event per object', () => {
-			this.createObjectLifecycleDataset('Event per object')
-		});
-
-		this.measureTime('Object creation', () => {
-			this.createObjectLifecycleDataset('Object creation')
-		});
-
-		this.measureTime('Object destruction', () => {
-			this.createObjectLifecycleDataset('Object destruction')
-		});
-
-		this.measureTime('Object lifecycle', () => {
-			[...this.createObjectLifecycleDataset('Object creation'), ...this.createObjectLifecycleDataset('Object destruction')]
-		});
-
+		
 		this.buildDottedChart();
 	}
 
@@ -56,6 +50,7 @@ class DottedChart {
 
 			eventData.push({
 				'timestamp': new Date(event['ocel:timestamp']),
+				'timeSinceObjectCreationInHours': 0,
 				'Activity': event['ocel:activity'],
 				'Object type': event['ocel:activity'],
 				'objectId': null,
@@ -63,7 +58,7 @@ class DottedChart {
 				'symbol': 'circle'
 			});
 		}
-		
+
 		eventData.sort( (a, b) => a.timestamp - b.timestamp);
 		for(let i = 0; i < eventData.length; i++) {
 			eventData[i].index = i;
@@ -79,20 +74,10 @@ class DottedChart {
 
 		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
 
-		// sort objectIds by their creation date, makes graphs look better/easier to read
-		let objectCreation = [];
-		for (let objectId in objectEventRelations) {
-			let relatedEvents = objectEventRelations[objectId];
-			if(!relatedEvents.length) continue;
-			let firstTimestamp = relatedEvents[0][2];
-			objectCreation.push([objectId, firstTimestamp]);
-		}
-		objectCreation.sort((a, b) => a[1] - b[1]);
-
 		let preInfoText = eventsToInclude == 'Event per object' ? '' : eventsToInclude + ' of ';
 
-		for (let objectIndex in objectCreation) {
-			let objectId = objectCreation[objectIndex][0];
+		for (let objectIndex in this.objectIdsByCreation) {
+			let objectId = this.objectIdsByCreation[objectIndex].objectId;
 			let objectType = this.model.ocel['ocel:objects'][objectId]['ocel:type'];
 			let events = objectEventRelations[objectId];
 
@@ -111,9 +96,11 @@ class DottedChart {
 			}
 
 			for(let event of eventsToAdd) {
+				let eventTime = new Date(event[2] * 1000);
 				objectLifecycleData.push({
 					'index': objectIndex,
-					'timestamp': new Date(event[2] * 1000),
+					'timestamp': eventTime,
+					'timeSinceObjectCreationInHours': (eventTime - this.objectCreationData[objectId]) / 3600000.0,
 					'Activity': event[1],
 					'Object type': objectType,
 					'objectId': objectId,
@@ -235,6 +222,7 @@ class DottedChart {
 					size: 19
 				}
 			};
+
 			Plotly.newPlot('plotlyDottedChart', data, layout, { modeBarButtonsToRemove: ['select2d', 'lasso2d'] });
 
 			Pm4JS.stopAlgorithm(thisUuid, {});
@@ -282,29 +270,23 @@ class DottedChart {
 			case 'Time of day [h]':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timestamp.getHours() + x.timestamp.getMinutes() / 60);
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timeSinceObjectCreation.getHours() + x.timestamp.getMinutes() / 60);
 				}
-				break;	
+				break;
+			case 'Object lifetime [h]':
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timeSinceObjectCreationInHours);
+				}
+				break
+			case 'Object lifetime [d]':
+				for(let i = 0; i < data.length; i++) {
+					let x = data[i];
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timeSinceObjectCreationInHours / 24);
+				}
+				break
 		}
 
 		return axisData;
-	}
-
-	measureTime(name, func) {
-		let out = `${name} & `;
-		let sum = 0;
-		let values = [];
-		for(let i = 0; i < 5; i++) {
-			let start = new Date();
-			func();
-			let end = new Date();
-			let elapsed = end - start;
-			sum += elapsed;
-			values.push(elapsed);
-			out += `${elapsed} & `
-		}
-		out += `${sum / 5.0} \\`
-		console.log(out);
-		console.log();
 	}
 }

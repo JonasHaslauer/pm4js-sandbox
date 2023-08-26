@@ -1238,6 +1238,8 @@
 								<option value="Day of week">Day of week</option>
 								<option value="Time of day [m]">Time of day [m]</option>
 								<option value="Time of day [h]">Time of day [h]</option>
+								<option value="Object lifetime [h]">Object lifetime [h]</option>
+								<option value="Object lifetime [d]">Object lifetime [d]</option>
 							</select>
 							<br>
 							<label for="dottedChartSelectY">Y:</label>
@@ -1248,6 +1250,8 @@
 								<option value="Day of week">Day of week</option>
 								<option value="Time of day [m]">Time of day [m]</option>
 								<option value="Time of day [h]">Time of day [h]</option>
+								<option value="Object lifetime [h]">Object lifetime [h]</option>
+								<option value="Object lifetime [d]">Object lifetime [d]</option>
 							</select>
 							<br>
 							<label for="dottedChartSelectCategory">Categorize by:</label>
@@ -1755,9 +1759,14 @@
 					if(newDataset == 'Event') {
 						$('#dottedChartSelectCategory').val('Activity').change();
 						$('#dottedChartSelectCategory > option[value="Object type"]').attr('disabled', 'disabled');
-						
+						if($('#dottedChartSelectX').val().startsWith('Object lifetime')) $('#dottedChartSelectX').val('Index').change();
+						if($('#dottedChartSelectY').val().startsWith('Object lifetime')) $('#dottedChartSelectX').val('Index').change();
+						$('#dottedChartSelectX > option[value^="Object lifetime"]').attr('disabled', 'disabled');
+						$('#dottedChartSelectY > option[value^="Object lifetime"]').attr('disabled', 'disabled');
 					} else {
 						$('#dottedChartSelectCategory > option[value="Object type"]').removeAttr('disabled');
+						$('#dottedChartSelectX > option[value^="Object lifetime"]').removeAttr('disabled');
+						$('#dottedChartSelectY > option[value^="Object lifetime"]').removeAttr('disabled');
 					}
 
 					setDottedChartSelectOrderSortingVisibility();

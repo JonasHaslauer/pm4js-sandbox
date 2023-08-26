@@ -53,6 +53,7 @@ class DottedChart {
 	// eventsToInclude = 'Event per object', 'Object creation', 'Object destruction'
 	createObjectLifecycleDataset(eventsToInclude) {
 		let objectLifecycleData = [];
+		let symbolToUse = eventsToInclude == 'Object destruction' ? 'cross' : 'circle';
 
 		let objectEventRelations = this.model.overallObjectsView.objectsIdsSorted;
 
@@ -95,7 +96,7 @@ class DottedChart {
 					'Object type': objectType,
 					'objectId': objectId,
 					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`,
-					'symbol': eventsToInclude == 'Object destruction' ? 'cross' : 'circle'
+					'symbol': symbolToUse
 				});
 			}
 		}
@@ -212,7 +213,7 @@ class DottedChart {
 					size: 19
 				}
 			};
-			Plotly.newPlot('plotlyDottedChart', data, layout, {responsive: true});
+			Plotly.newPlot('plotlyDottedChart', data, layout, { modeBarButtonsToRemove: ['select2d', 'lasso2d'] });
 
 			Pm4JS.stopAlgorithm(thisUuid, {});
 		}, 100);

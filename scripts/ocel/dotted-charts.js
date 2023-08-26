@@ -17,6 +17,26 @@ class DottedChart {
 
 		this.currentDataset = [];
 
+		this.measureTime('Event', () => {
+			this.createEventDataset();
+		});
+
+		this.measureTime('Event per object', () => {
+			this.createObjectLifecycleDataset('Event per object')
+		});
+
+		this.measureTime('Object creation', () => {
+			this.createObjectLifecycleDataset('Object creation')
+		});
+
+		this.measureTime('Object destruction', () => {
+			this.createObjectLifecycleDataset('Object destruction')
+		});
+
+		this.measureTime('Object lifecycle', () => {
+			[...this.createObjectLifecycleDataset('Object creation'), ...this.createObjectLifecycleDataset('Object destruction')]
+		});
+
 		this.buildDottedChart();
 	}
 
@@ -34,18 +54,20 @@ class DottedChart {
 				relatedObjectTypes.add(this.model.ocel['ocel:objects'][relatedObject]['ocel:type'])
 			}
 
-			eventId = parseInt(eventId);
-			eventData[eventId] = {
-				'index': parseInt(eventId),
+			eventData.push({
 				'timestamp': new Date(event['ocel:timestamp']),
 				'Activity': event['ocel:activity'],
 				'Object type': event['ocel:activity'],
 				'objectId': null,
 				'info': `${eventId}: ${[...relatedObjectTypes].join(', ')} (${event['ocel:omap'].slice(0, 9).join(', ')}${event['ocel:omap'].length > 8 ? ', ...' : ''})`,
 				'symbol': 'circle'
-			}
+			});
 		}
-		eventData = eventData.filter((x) => x !== undefined);
+		
+		eventData.sort( (a, b) => a.timestamp - b.timestamp);
+		for(let i = 0; i < eventData.length; i++) {
+			eventData[i].index = i;
+		}
 		
 		return eventData;
 	}
@@ -266,5 +288,23 @@ class DottedChart {
 		}
 
 		return axisData;
+	}
+
+	measureTime(name, func) {
+		let out = `${name} & `;
+		let sum = 0;
+		let values = [];
+		for(let i = 0; i < 5; i++) {
+			let start = new Date();
+			func();
+			let end = new Date();
+			let elapsed = end - start;
+			sum += elapsed;
+			values.push(elapsed);
+			out += `${elapsed} & `
+		}
+		out += `${sum / 5.0} \\`
+		console.log(out);
+		console.log();
 	}
 }

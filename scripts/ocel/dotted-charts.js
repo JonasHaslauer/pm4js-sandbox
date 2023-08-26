@@ -41,7 +41,8 @@ class DottedChart {
 				'Activity': event['ocel:activity'],
 				'Object type': event['ocel:activity'],
 				'objectId': null,
-				'info': `${eventId}: ${[...relatedObjectTypes].join(', ')} (${event['ocel:omap'].slice(0, 9).join(', ')}${event['ocel:omap'].length > 8 ? ', ...' : ''})`
+				'info': `${eventId}: ${[...relatedObjectTypes].join(', ')} (${event['ocel:omap'].slice(0, 9).join(', ')}${event['ocel:omap'].length > 8 ? ', ...' : ''})`,
+				'symbol': 'circle'
 			}
 		}
 		eventData = eventData.filter((x) => x !== undefined);
@@ -93,7 +94,8 @@ class DottedChart {
 					'Activity': event[1],
 					'Object type': objectType,
 					'objectId': objectId,
-					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`
+					'info': `${preInfoText}${objectType} (${objectId}) - ${event[1]} (${event[0]})`,
+					'symbol': eventsToInclude == 'Object destruction' ? 'cross' : 'circle'
 				});
 			}
 		}
@@ -123,7 +125,6 @@ class DottedChart {
 
 		// if dataset was not created yet, create it
 		if(!this.datasets[this.currentDatasetName]) {
-			console.log('create dataset');
 			if(this.currentDatasetName == 'Event') this.datasets[this.currentDatasetName] = this.createEventDataset();
 			else if(this.currentDatasetName == 'Object lifecycle') this.datasets[this.currentDatasetName] = [...this.createObjectLifecycleDataset('Object creation'), ...this.createObjectLifecycleDataset('Object destruction')]
 			else this.datasets[this.currentDatasetName] = this.createObjectLifecycleDataset(this.currentDatasetName)
@@ -158,8 +159,6 @@ class DottedChart {
 	buildDottedChart() {
 		let thisUuid = Pm4JS.startAlgorithm({"name": "OCPM buildDottedChart"});
 
-		console.log(this)
-
 		setTimeout(() => {
 			this.updateConfiguration();
 			let isLifecyclePlot = this.currentDatasetName == 'Object lifecycle';
@@ -167,26 +166,18 @@ class DottedChart {
 			let dataX = this.createAxis(this.x);
 			let dataY = this.createAxis(this.y);
 
-			let symbol = 'circle';
-			switch(this.currentDatasetName) {
-				case 'Object destruction':
-					symbol = 'cross';
-					break;
-				case 'Object lifecycle':
-					symbol = {};
-					break; 
-			}
-
+			let symbol = {};
 			let dataText = {};
 			for(let type of this.allTypes) {
 				dataText[type] = [];
-				if(isLifecyclePlot) symbol[type] = [];
+				symbol[type] = [];
 			}
-			for(let i = 0; i > this.currentDataset.length; i++) {
+
+			for(let i = 0; i < this.currentDataset.length; i++) {
 				if(this.randomSampling[i]) {
 					let x = this.currentDataset[i];
 					dataText[x[this.type]].push(x.info);
-					if(isLifecyclePlot) symbol[x[this.type]].push(x.info.split(' ')[1] == 'creation' ? 'circle' : 'cross');
+					symbol[x[this.type]].push(x.symbol);
 				}
 			}
 
@@ -200,7 +191,7 @@ class DottedChart {
 					'mode': 'markers',
 					'marker': { 
 						'size': this.dotSize,
-						'symbol': isLifecyclePlot ? symbol[type] : symbol
+						'symbol': symbol[type]
 					},
 					'opacity': this.dotOpacity,
 					'name': type

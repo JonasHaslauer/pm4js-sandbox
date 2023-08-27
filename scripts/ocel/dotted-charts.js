@@ -289,4 +289,10 @@ class DottedChart {
 
 		return axisData;
 	}
+
+	updateVisualSettings() {
+		this.updateConfiguration();
+
+		Plotly.restyle('plotlyDottedChart', { 'opacity': this.dotOpacity, 'marker.size': this.dotSize });
+	}
 }

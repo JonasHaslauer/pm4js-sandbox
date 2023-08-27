@@ -1254,12 +1254,12 @@
 								<option value="Object lifetime [d]">Object lifetime [d]</option>
 							</select>
 							<br>
-							<label for="dottedChartSelectCategory">Categorize by:</label>
+							<label id="dottedChartSelectCategoryLabel" for="dottedChartSelectCategory">Categorize by:</label>
 							<select id="dottedChartSelectCategory" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()">
 								<option value="Activity" selected>Activity</option>
 								<option value="Object type">Object type</option>
 							</select>
-							<br>
+							<br id="dottedChartSelectCategoryBr">
 							<label id="dottedChartSelectOrderSortingLabel" for="dottedChartSelectOrderSorting">Sort index by:</label>
 							<select id="dottedChartSelectOrderSorting" style="font-size: 16pt" onchange="dottedChart.buildDottedChart()" checked>
 								<option value="Creation time" selected>Creation time</option>
@@ -1270,7 +1270,7 @@
 							<input type="number" id="dottedChartRandomSamplingValue" name="dottedChartRandomSamplingValue" title="Percentage of dots to be removed" min="0" max="99" value="0" onchange="changeDottedChartRandomSamplingValue(this)" style="width: 2.5em;"/>
 							<br>
 							<label for="dottedChartDotSize">Size of dots:</label>
-							<input type="number" id="dottedChartDotSize" name="dottedChartDotSize" min="1" max="99" value="5" onchange="dottedChart.buildDottedChart()" style="width: 2.5em;"/>
+							<input type="number" id="dottedChartDotSize" name="dottedChartDotSize" min="1" max="99" value="5" onchange="dottedChart.updateVisualSettings()" style="width: 2.5em;"/>
 							<br>
 							<label for="dottedChartDotOpacity">Opacity of dots (%):</label>
 							<input type="number" id="dottedChartDotOpacity" name="dottedChartDotOpacity" min="1" max="100" step="5" value="100" onchange="changeDottedChartDotOpacity(this)" style="width: 3.2em;"/>
@@ -1758,15 +1758,19 @@
 				function changeDottedChartDataset(newDataset) {
 					if(newDataset == 'Event') {
 						$('#dottedChartSelectCategory').val('Activity').change();
-						$('#dottedChartSelectCategory > option[value="Object type"]').attr('disabled', 'disabled');
-						if($('#dottedChartSelectX').val().startsWith('Object lifetime')) $('#dottedChartSelectX').val('Index').change();
+						$('#dottedChartSelectCategoryLabel').attr('hidden', 'hidden');
+						$('#dottedChartSelectCategory').attr('hidden', 'hidden');
+						$('#dottedChartSelectCategoryBr').attr('hidden', 'hidden');
+						if($('#dottedChartSelectX').val().startsWith('Object lifetime')) $('#dottedChartSelectX').val('Timestamp').change();
 						if($('#dottedChartSelectY').val().startsWith('Object lifetime')) $('#dottedChartSelectX').val('Index').change();
-						$('#dottedChartSelectX > option[value^="Object lifetime"]').attr('disabled', 'disabled');
-						$('#dottedChartSelectY > option[value^="Object lifetime"]').attr('disabled', 'disabled');
+						$('#dottedChartSelectX > option[value^="Object lifetime"]').attr('hidden', 'hidden');
+						$('#dottedChartSelectY > option[value^="Object lifetime"]').attr('hidden', 'hidden');
 					} else {
-						$('#dottedChartSelectCategory > option[value="Object type"]').removeAttr('disabled');
-						$('#dottedChartSelectX > option[value^="Object lifetime"]').removeAttr('disabled');
-						$('#dottedChartSelectY > option[value^="Object lifetime"]').removeAttr('disabled');
+						$('#dottedChartSelectCategoryLabel').removeAttr('hidden', 'hidden');
+						$('#dottedChartSelectCategory').removeAttr('hidden', 'hidden');
+						$('#dottedChartSelectCategoryBr').removeAttr('hidden', 'hidden');
+						$('#dottedChartSelectX > option[value^="Object lifetime"]').removeAttr('hidden');
+						$('#dottedChartSelectY > option[value^="Object lifetime"]').removeAttr('hidden');
 					}
 
 					setDottedChartSelectOrderSortingVisibility();
@@ -1808,7 +1812,7 @@
 						dotOpacityInput.value = 100;
 					}
 
-					dottedChart.buildDottedChart();
+					dottedChart.updateVisualSettings();
 				}
 
 				$('.hover_bkgr_fricc').click(function(){

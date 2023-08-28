@@ -96,11 +96,10 @@ class DottedChart {
 			}
 
 			for(let event of eventsToAdd) {
-				let eventTime = new Date(event[2] * 1000);
 				objectLifecycleData.push({
 					'index': objectIndex,
-					'timestamp': eventTime,
-					'timeSinceObjectCreationInHours': (eventTime - this.objectCreationData[objectId]) / 3600000.0,
+					'timestamp': new Date(event[2] * 1000),
+					'timeSinceObjectCreationInHours': (new Date(event[2] * 1000) - this.objectCreationData[objectId]) / 3600000.0,
 					'Activity': event[1],
 					'Object type': objectType,
 					'objectId': objectId,
@@ -110,6 +109,8 @@ class DottedChart {
 			}
 		}
 		
+		console.log(objectLifecycleData)
+
 		return objectLifecycleData;
 	}
 
@@ -274,7 +275,7 @@ class DottedChart {
 			case 'Time of day [h]':
 				for(let i = 0; i < data.length; i++) {
 					let x = data[i];
-					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timeSinceObjectCreation.getHours() + x.timestamp.getMinutes() / 60);
+					if(this.randomSampling[i]) axisData[x[this.type]].push(x.timestamp.getHours() + x.timestamp.getMinutes() / 60);
 				}
 				break;
 			case 'Object lifetime [h]':

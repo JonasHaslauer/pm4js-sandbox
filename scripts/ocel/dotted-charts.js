@@ -219,7 +219,7 @@ class DottedChart {
 				yaxis: {
 					title: this.y,
 					automargin: true,
-					categoryorder: this.x == 'Day of week' ? 'array' : 'trace',
+					categoryorder: this.y == 'Day of week' ? 'array' : 'trace',
 					categoryarray: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 				},
 				font: {

@@ -212,11 +212,15 @@ class DottedChart {
 				title: `Dotted Chart - ${this.currentDatasetName}`,
 				xaxis: {
 					title: this.x,
-					automargin: true
+					automargin: true,
+					categoryorder: this.x == 'Day of week' ? 'array' : 'trace',
+					categoryarray: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 				},
 				yaxis: {
 					title: this.y,
-					automargin: true
+					automargin: true,
+					categoryorder: this.x == 'Day of week' ? 'array' : 'trace',
+					categoryarray: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 				},
 				font: {
 					size: 19
